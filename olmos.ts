@@ -9,11 +9,9 @@ type MergeSchema<
     Keys extends (keyof SchemaMap)[], 
     Schema extends Record<string, any> = {}
 > =
-     Keys extends [infer K extends string]
-        ? Schema & SchemaMap[K]
-        : Keys extends [infer K extends string, ...infer Rest extends string[]]
-            ? MergeSchema<SchemaMap, Rest, Schema & AddPrefix<K, SchemaMap[K]>> 
-            : Schema;
+      Keys extends [infer K extends string, ...infer Rest extends string[]]
+        ? MergeSchema<SchemaMap, Rest, Schema & AddPrefix<K, SchemaMap[K]>> 
+        : Schema;
         
 type MapPick<SchemaMap> = {
   [K in keyof SchemaMap as K extends `${string}.${infer Value}` ? Value : K]: SchemaMap[K];

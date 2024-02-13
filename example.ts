@@ -1,4 +1,4 @@
-import {Olmos} from "./basemodel";
+import {Olmos} from "./olmos";
 import {sql} from "./db";
 
 interface PersonaSchema {
