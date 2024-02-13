@@ -1,6 +1,9 @@
-#Query builder library for typescript
+# Query builder library for typescript
 
-##Usage
+## Type validations
+https://github.com/Lautarotetamusa/Olmos.ts/assets/51541903/a6f19046-3810-4289-9532-e304bf218f7c
+
+## Usage
 
 ```ts
 import {Olmos} from "olmos"
@@ -32,4 +35,4 @@ const personasCargo = Persona.model.innerJoin(cargo, {
 const res1 = personasCargo.getOne({"Personas.cedula": 123});
 ```
 
-##Motivation
+## Motivation
