@@ -13,9 +13,38 @@ type MergeSchema<
         ? MergeSchema<SchemaMap, Rest, Schema & AddPrefix<K, SchemaMap[K]>> 
         : Schema;
         
-type MapPick<SchemaMap> = {
-  [K in keyof SchemaMap as K extends `${string}.${infer Value}` ? Value : K]: SchemaMap[K];
+type MapPick<Map> = {
+  [K in keyof Map as K extends `${string}.${infer Value}` ? Value : K]: Map[K];
 }
+
+type Merge<
+    Map extends Record<string, any>,
+    Keys extends (keyof Map)[] = (keyof Map)[],
+    Acc extends Record<string, any> = {}
+>=
+  Keys extends [infer K extends string, ...infer Rest extends string[]]
+    ? Acc & Merge<Map, Rest, Map[K]>
+    : Acc;
+
+type GetCommonProperties<
+    Map extends Record<string, any>,
+    Tables extends (keyof Map)[],
+    Acc extends Record<string, any> = {}
+>=
+  Tables extends [infer Table extends string, ...infer Rest extends string[]]
+    ? Acc & GetCommonProperties<Map, Rest, {[K in string & keyof Map[keyof Map] as `${Table}.${K}`]: Map[Table][K]}>
+    : Acc
+
+type GenerateSchema<
+    Map extends Record<string, any>,
+    Tables extends (keyof Map)[],
+
+    merged extends Record<string, any> = Merge<Map, Tables>,
+    comunes = keyof Map[keyof Map],
+    distintos = Exclude<keyof merged, comunes>
+>=
+    {[K in string & distintos]: merged[K]} &
+    GetCommonProperties<Map, Tables>;
 
 interface DBConnection{
     query<T>(sql: string, value: any): Promise<T>;
@@ -40,16 +69,16 @@ export class Olmos<
 
     /**
         * Schema combinado de todas las tablas actuales.
-        * Se agrega como prefijo el nombre de la tabla.
+        * Se agrega como prefijo el nombre de la tabla a los campos que esten duplicados.
         * Al hacer un join se agrega el nombre de la tabla a la lista de tablas.
         * Ej: {
              "Personas.nombre": string,
-             "Personas.cedula": string,
-             "Cargos.cod_cargo": number,
+             "cedula": string,
+             "cod_cargo": number,
              "Cargos.nombre": string
           }
         */
-    Schema = MergeSchema<SchemaMap, Tables>
+    Schema = GenerateSchema<SchemaMap, Tables>
 >{
     /**
         * 
@@ -63,7 +92,7 @@ export class Olmos<
     }
 
     static new<S extends Record<string, any>, const T extends string>(from: T, connection: DBConnection) {
-       return new Olmos<{[K in T]: S}, [T]>(from as string, connection); 
+        return new Olmos<{[K in T]: S}, [T]>(from as string, connection); 
     }
 
     protected formatWhere(req?: Partial<Schema>){
@@ -88,7 +117,8 @@ export class Olmos<
     }
 
     innerJoin<S extends Record<string, any>, 
-              T extends string[]>(
+              T extends string[],
+            >(
                  model: Olmos<S, T>, 
                  on: Partial<
                         Record<keyof MergeSchema<SchemaMap & S, [...Tables, ...T]>, 
@@ -113,8 +143,9 @@ export class Olmos<
     }
 
     async getOne<const Field extends keyof Schema>(
-        where?: Partial<Schema>, 
-        fields: Field[] | [] = []): 
+        where: Partial<Schema> | undefined = undefined, 
+        fields: Field[] | [] = []
+    ): 
         Promise<MapPick<Pick<Schema, typeof fields[number]>>>
     {
         const {whereQuery, whereList} = this.formatWhere(where);
@@ -134,7 +165,7 @@ export class Olmos<
     }
 
     async getAll<const Field extends keyof Schema>(
-        where?: Partial<Schema>, 
+        where: Partial<Schema>, 
         fields: Field[] | [] = []): 
         Promise<MapPick<Pick<Schema, typeof fields[number]>>>
     {
