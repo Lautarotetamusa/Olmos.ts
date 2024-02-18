@@ -1,19 +1,6 @@
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 
-type AddPrefix<table extends string, T> = {
-  [K in keyof T as `${table}.${string & K}`]: T[K];
-};
-
-type MergeSchema<
-    SchemaMap extends Record<string, any>, 
-    Keys extends (keyof SchemaMap)[], 
-    Schema extends Record<string, any> = {}
-> =
-      Keys extends [infer K extends string, ...infer Rest extends string[]]
-        ? MergeSchema<SchemaMap, Rest, Schema & AddPrefix<K, SchemaMap[K]>> 
-        : Schema;
-        
-type MapPick<Map> = {
+type RemovePrefix<Map> = {
   [K in keyof Map as K extends `${string}.${infer Value}` ? Value : K]: Map[K];
 }
 
@@ -26,29 +13,38 @@ type Merge<
     ? Acc & Merge<Map, Rest, Map[K]>
     : Acc;
 
-type GetCommonProperties<
+type generateSchema<
     Map extends Record<string, any>,
     Tables extends (keyof Map)[],
-    Acc extends Record<string, any> = {}
+    Prev extends (keyof Map)[] = [],
+    Acc extends Record<string, any> = {},
 >=
   Tables extends [infer Table extends string, ...infer Rest extends string[]]
-    ? Acc & GetCommonProperties<Map, Rest, {[K in string & keyof Map[keyof Map] as `${Table}.${K}`]: Map[Table][K]}>
+    ? Acc & generateSchema<
+        Map, Rest, [...Prev, Table],
+        parseSchema<Map, Table, [...Prev, ...Rest]>
+    >
     : Acc
 
-type GenerateSchema<
+type parseSchema<
     Map extends Record<string, any>,
-    Tables extends (keyof Map)[],
-
-    merged extends Record<string, any> = Merge<Map, Tables>,
-    comunes = keyof Map[keyof Map],
-    distintos = Exclude<keyof merged, comunes>
->=
-    {[K in string & distintos]: merged[K]} &
-    GetCommonProperties<Map, Tables>;
+    Table extends string, //La tabla actual
+    Tables extends (keyof Map)[], //Todas las otras tablas
+    diff extends keyof Map[Table] = Exclude<keyof Map[Table], Exclude<keyof Map[Table], keyof Merge<Map, Tables>>>
+> =
+    Omit<Map[Table], diff> &
+    {
+        [K in string & diff as `${Table}.${K}`]: Map[Table][K]
+    }
 
 interface DBConnection{
     query<T>(sql: string, value: any): Promise<T>;
 }
+
+export type getSchema<T> = 
+    T extends Olmos<infer _, infer _, infer Schema>
+        ? Schema
+        : never
 
 export class Olmos<
     /** 
@@ -78,7 +74,7 @@ export class Olmos<
              "Cargos.nombre": string
           }
         */
-    Schema = GenerateSchema<SchemaMap, Tables>
+    Schema = generateSchema<SchemaMap, Tables>
 >{
     /**
         * 
@@ -118,13 +114,14 @@ export class Olmos<
 
     innerJoin<S extends Record<string, any>, 
               T extends string[],
-            >(
+             >(
                  model: Olmos<S, T>, 
                  on: Partial<
-                        Record<keyof MergeSchema<SchemaMap & S, [...Tables, ...T]>, 
-                               keyof MergeSchema<S & SchemaMap, [...T, ...Tables]>
-                        >
-                     >){
+                    Record<
+                        keyof generateSchema<SchemaMap & S, [...Tables, ...T]>,
+                        keyof generateSchema<SchemaMap & S, [...Tables, ...T]>
+                    >
+                >){
         const onCondition = Object.keys(on).map(key => 
             `${key} = ${on[key as keyof SchemaMap] as any}`
         ).join(' and ');
@@ -146,7 +143,7 @@ export class Olmos<
         where: Partial<Schema> | undefined = undefined, 
         fields: Field[] | [] = []
     ): 
-        Promise<MapPick<Pick<Schema, typeof fields[number]>>>
+        Promise<RemovePrefix<Pick<Schema, typeof fields[number]>>>
     {
         const {whereQuery, whereList} = this.formatWhere(where);
         
@@ -166,8 +163,9 @@ export class Olmos<
 
     async getAll<const Field extends keyof Schema>(
         where: Partial<Schema>, 
-        fields: Field[] | [] = []): 
-        Promise<MapPick<Pick<Schema, typeof fields[number]>>>
+        fields: Field[] | [] = []
+    ): 
+        Promise<RemovePrefix<Pick<Schema, typeof fields[number]>>>
     {
         const {whereQuery, whereList} = this.formatWhere(where);
         
@@ -177,7 +175,6 @@ export class Olmos<
             ${whereQuery}`;
 
         const [rows] = await this.connection.query<RowDataPacket[]>(query, whereList);
-
         return rows as any;
     }
 
