@@ -5,7 +5,14 @@ interface PersonaSchema {
     nombre: string,
     cedula: string,
     cod_cargo: number,
-    telefono: number
+    telefono: number,
+    password: string,
+    cod_zona: number
+}
+
+interface ZonaSchema {
+    cod_zona: number, 
+    nombre: string
 }
 
 interface CargoSchema {
@@ -29,7 +36,9 @@ class Persona{
     }
 
     static async getOne(cedula: PersonaSchema["cedula"]){
-        const fields = await Persona.model.getOne({"cedula": cedula});
+        const fields = await Persona.model.getOne({
+            where: {"cedula": cedula}
+        });
         return new Persona(fields);
     }
     
@@ -45,19 +54,23 @@ class Persona{
 async function main(){
     let persona = new Persona({
         nombre: "juan",
-        cedula: "32142",
+        cedula: "2043491978",
         cod_cargo: 2,
-        telefono: 12345
+        telefono: 12345,
+        password: "test",
+        cod_zona: 1
     });
     const cargo = Olmos.new<CargoSchema, "Cargos">("Cargos", sql);
-
     const depto = Olmos.new<DeptoSchema, "Departamentos">("Departamentos", sql);
-   
-    const res2 = await Persona.model.getOne({}, ["nombre", "telefono"]);
-    console.log(res2);
+    const zona = Olmos.new<ZonaSchema, "Zonas">("Zonas", sql);
 
+    const res2 = await Persona.model.getOne({
+        fields: ["nombre", "telefono", "cedula"]}
+    );
+    console.log(res2.nombre);
+    
     const personasCargo = Persona.model.innerJoin(cargo, {
-        "Cargos.cod_cargo": "Personas.cod_cargo"
+        "Personas.cod_cargo": "Cargos.cod_cargo"
     });
     type PersonasCargoSchema = getSchema<typeof personasCargo>;
     
@@ -66,7 +79,22 @@ async function main(){
     });
     type PersonasCargoDeptoSchema = getSchema<typeof personasCargoDepto>;
 
-    const res = await personasCargoDepto.getOne({}, ["Personas.nombre", "Cargos.cod_cargo", "Departamentos.telefono"]);
+    /*const res = personasCargo.innerJoin(zona, {
+        "Personas.cod_zona": "Zonas.cod_zona"
+    }).insert({
+        "Zonas.cod_zona": 1,
+        "Personas.cod_cargo": 1,
+        "Personas.nombre": "juan",
+        "cedula": "12345",
+        "telefono": 12345,
+        "Cargos.nombre": "nuevo cargo",
+        "Cargos.cod_cargo": 1
+    });*/
+
+    const res = await personasCargoDepto.getOne({
+        where: {cedula: ['1', '2', '3', '4']},
+        fields: ["Personas.nombre", "Cargos.cod_cargo", "Departamentos.telefono"]
+    });
     console.log(res);
 
     console.log(persona);

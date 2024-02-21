@@ -1,9 +1,14 @@
 {
-  "dependencies": {
-    "mysql2": "^3.9.1",
-    "ts-node": "^10.9.2"
-  },
-  "scripts": {
-    "example": "tsc example.ts --outDir dist/ --module commonjs && node dist/example.js"
-  }
+    "name": "olmos.js",
+    "version": "1.0.0",
+    "author": "Lautaro Teta Musa",
+    "license": "ISC",
+    "main": "olmos.ts",
+    "dependencies": {
+        "mysql2": "^3.9.1",
+        "ts-node": "^10.9.2"
+    },
+    "scripts": {
+        "example": "tsc example.ts --outDir dist/ --module commonjs && node dist/example.js"
+    }
 }

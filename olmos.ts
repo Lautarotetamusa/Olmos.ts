@@ -140,15 +140,16 @@ export class Olmos<
     }
 
     async getOne<const Field extends keyof Schema>(
-        where: Partial<Schema> | undefined = undefined, 
-        fields: Field[] | [] = []
-    ): 
-        Promise<RemovePrefix<Pick<Schema, typeof fields[number]>>>
+        options: {
+            where?: Partial<Schema>, 
+            fields?: Field[]
+        }
+    ): Promise<RemovePrefix<Pick<Schema, Field>>>
     {
-        const {whereQuery, whereList} = this.formatWhere(where);
+        const {whereQuery, whereList} = this.formatWhere(options.where);
         
         const query = `
-            SELECT ${fields.length > 0 ? fields.join(',') : '*'}
+            SELECT ${options.fields ? options.fields.join(',') : '*'}
             FROM ${this.from}
             ${whereQuery}`;
 
@@ -162,15 +163,16 @@ export class Olmos<
     }
 
     async getAll<const Field extends keyof Schema>(
-        where: Partial<Schema>, 
-        fields: Field[] | [] = []
-    ): 
-        Promise<RemovePrefix<Pick<Schema, typeof fields[number]>>>
+        options: {
+            where?: Partial<Schema>, 
+            fields?: Field[]
+        }
+    ): Promise<RemovePrefix<Pick<Schema, Field>>>
     {
-        const {whereQuery, whereList} = this.formatWhere(where);
+        const {whereQuery, whereList} = this.formatWhere(options.where);
         
         const query = `
-            SELECT ${fields.length > 0 ? fields.join(',') : '*'}
+            SELECT ${options.fields ? options.fields.join(',') : '*'}
             FROM ${this.from}
             ${whereQuery}`;
 
