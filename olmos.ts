@@ -37,6 +37,8 @@ type parseSchema<
         [K in string & diff as `${Table}.${K}`]: Map[Table][K]
     }
 
+type Where<Schema> = Partial<{ [K in keyof Schema]: Schema[K] | Schema[K][] }>;
+
 interface DBConnection{
     query<T>(sql: string, value: any): Promise<T>;
 }
@@ -91,19 +93,23 @@ export class Olmos<
         return new Olmos<{[K in T]: S}, [T]>(from as string, connection); 
     }
 
-    protected formatWhere(req?: Partial<Schema>){
+    protected formatWhere(req?: Where<Schema>){
         let whereQuery = "";
-        let whereList: any[] = []
+        let whereList: any[] = [];
+
         if (req && Object.keys(req).length > 0){
             type key = keyof typeof req;
             whereQuery = "WHERE ";
             for (let field in req){ 
-                whereQuery += `${field} = ? AND `;
-                whereList.push(req[field as key]);
+                if (Array.isArray(req[field])){
+                    const values = (req[field as key] as any[]).join(', ');
+                    whereQuery += `(${field}) IN (${values}) AND `;
+                }else{
+                    whereQuery += `${field} = ? AND `;
+                    whereList.push(req[field as key]);
+                }
             }
             whereQuery = whereQuery.substring(0, whereQuery.length-4);
-            console.log(whereQuery);
-            console.log(whereList);
         }
 
         return {
@@ -131,7 +137,6 @@ export class Olmos<
             INNER JOIN ${model.from}
             ON ${onCondition}
         `;
-        console.log("join:", joinedFrom);
 
         return new Olmos<
             SchemaMap & S,
@@ -141,7 +146,7 @@ export class Olmos<
 
     async getOne<const Field extends keyof Schema>(
         options: {
-            where?: Partial<Schema>, 
+            where?: Where<Schema>, 
             fields?: Field[]
         }
     ): Promise<RemovePrefix<Pick<Schema, Field>>>
@@ -152,6 +157,7 @@ export class Olmos<
             SELECT ${options.fields ? options.fields.join(',') : '*'}
             FROM ${this.from}
             ${whereQuery}`;
+        console.log(query);
 
         const [rows] = await this.connection.query<RowDataPacket[]>(query, whereList);
 
@@ -164,7 +170,7 @@ export class Olmos<
 
     async getAll<const Field extends keyof Schema>(
         options: {
-            where?: Partial<Schema>, 
+            where?: Where<Schema>, 
             fields?: Field[]
         }
     ): Promise<RemovePrefix<Pick<Schema, Field>>>
@@ -194,7 +200,7 @@ export class Olmos<
     }
 
     async update(req: Schema, 
-                 where?: Partial<Schema>
+                 where?: Where<Schema>
         ){
         const {whereQuery, whereList} = this.formatWhere(where);
 
@@ -214,7 +220,7 @@ export class Olmos<
         }
     }
 
-    async delete(where?: Partial<Schema>){
+    async delete(where?: Where<Schema>){
         const {whereQuery, whereList} = this.formatWhere(where);
 
         const query = `

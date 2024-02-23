@@ -37,7 +37,7 @@ class Persona{
 
     static async getOne(cedula: PersonaSchema["cedula"]){
         const fields = await Persona.model.getOne({
-            where: {"cedula": cedula}
+            where: {cedula: cedula}
         });
         return new Persona(fields);
     }
@@ -67,7 +67,6 @@ async function main(){
     const res2 = await Persona.model.getOne({
         fields: ["nombre", "telefono", "cedula"]}
     );
-    console.log(res2.nombre);
     
     const personasCargo = Persona.model.innerJoin(cargo, {
         "Personas.cod_cargo": "Cargos.cod_cargo"
@@ -79,33 +78,26 @@ async function main(){
     });
     type PersonasCargoDeptoSchema = getSchema<typeof personasCargoDepto>;
 
-    /*const res = personasCargo.innerJoin(zona, {
-        "Personas.cod_zona": "Zonas.cod_zona"
-    }).insert({
-        "Zonas.cod_zona": 1,
-        "Personas.cod_cargo": 1,
-        "Personas.nombre": "juan",
+    const idPersona = await Persona.model.insert({
         "cedula": "12345",
         "telefono": 12345,
-        "Cargos.nombre": "nuevo cargo",
-        "Cargos.cod_cargo": 1
-    });*/
+        "nombre": "juan",
+        "password": "anashe",
+        "cod_zona": 1,
+        "cod_cargo": 1
+    });
 
-    const res = await personasCargoDepto.getOne({
-        where: {cedula: ['1', '2', '3', '4']},
-        fields: ["Personas.nombre", "Cargos.cod_cargo", "Departamentos.telefono"]
+    const res = await personasCargoDepto.getAll({
+        where: {cedula: ['2043491978', '348213902', '348213901']},
+        fields: ["cedula", "Personas.nombre", "Cargos.cod_cargo", "Departamentos.telefono"]
     });
     console.log(res);
 
-    console.log(persona);
     await persona.save();
-    console.log("Cedula:", persona.fields.cedula); // 1
 
     persona = await Persona.getOne("12345");
-    console.log(persona);
     persona.fields.nombre = "jose";
     await persona.save();
-    console.log("Nombre:", persona.fields.nombre); //"jose"
 }
 
 main().then(() => {
