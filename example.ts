@@ -12,7 +12,7 @@ interface PersonaSchema {
 }
 
 interface ZonaSchema {
-    cod_zona: number, 
+    cod_zona: Generated<number>, 
     nombre: string
 }
 
@@ -68,6 +68,11 @@ async function main(){
     const cargo = Olmos.new<CargoSchema, "Cargos">("Cargos", sql);
     const depto = Olmos.new<DeptoSchema, "Departamentos">("Departamentos", sql);
     const zona = Olmos.new<ZonaSchema, "Zonas">("Zonas", sql);
+   
+    //El cod de zona debería ser tomado de la tabla, eso estaría muy bueno
+    const nuevaZona = zona.insert({
+        "nombre": "holas"
+    });
 
     const res2 = await Persona.model.getOne({
         where: {
@@ -77,12 +82,12 @@ async function main(){
         fields: ["nombre", "telefono", "cedula"]}
     );
     
-    const personasCargo = Persona.model.innerJoin(cargo, {
+    const personasCargo = Persona.model.join("inner", cargo, {
         "Personas.cod_cargo": "Cargos.cod_cargo"
     });
     type PersonasCargoSchema = getSchema<typeof personasCargo>;
     
-    const personasCargoDepto = personasCargo.innerJoin(depto, {
+    const personasCargoDepto = personasCargo.join("inner", depto, {
         "Cargos.id_depto": "Departamentos.id_depto"
     });
     type PersonasCargoDeptoSchema = getSchema<typeof personasCargoDepto>;

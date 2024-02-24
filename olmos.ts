@@ -40,6 +40,8 @@ type parseSchema<
 
 type Where<Schema> = Partial<{ [K in keyof Schema]: WhereCompleted<Schema[K]>}>;
 
+type JoinType = "left" | "inner" | "right" | "outer";
+
 interface DBConnection{
     query<T>(sql: string, value: any): Promise<T>;
 }
@@ -110,9 +112,10 @@ export class Olmos<
         return [query, list];
     }
 
-    innerJoin<S extends Record<string, any>, 
+    join<S extends Record<string, any>, 
               T extends string[],
              >(
+                 type: JoinType = "inner",
                  model: Olmos<S, T>, 
                  on: Partial<
                     Record<
@@ -126,9 +129,8 @@ export class Olmos<
 
         const joinedFrom = `
             ${this.from}
-            INNER JOIN ${model.from}
-            ON ${onCondition}
-        `;
+            ${type} JOIN ${model.from}
+            ON ${onCondition}`;
 
         return new Olmos<
             SchemaMap & S,
@@ -149,7 +151,6 @@ export class Olmos<
             SELECT ${options.fields ? options.fields.join(',') : '*'}
             FROM ${this.from}
             ${whereQuery}`;
-        console.log(query);
 
         const [rows] = await this.connection.query<RowDataPacket[]>(query, whereList);
 
@@ -185,8 +186,9 @@ export class Olmos<
             const result = await this.connection.query<ResultSetHeader>(query, req);
             return result.insertId;
         } catch (error: any) {
-            if ('code' in error && error.code == "ER_DUP_ENTRY")
+            if ('code' in error && error.code == "ER_DUP_ENTRY"){
                 throw new Error(`Ya existe una ${this.from} con esta clave`);
+            }
             throw new Error(error.message);
         }
     }
@@ -207,7 +209,9 @@ export class Olmos<
                 throw new Error(`No se encontro el item de la tabla ${this.from}`);
             }
         } catch (error: any) {
-            if ('code' in error && error.code == "ER_DUP_ENTRY")
+            if ('code' in error && error.code == "ER_DUP_ENTRY"){
+                throw new Error(`Ya existe una ${this.from} con esta clave`);
+            }
             throw new Error(error.message);
         }
     }
