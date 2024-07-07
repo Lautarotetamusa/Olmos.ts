@@ -29,7 +29,9 @@ test('Select where', function () {
         where("cedula").
             in(["345", "678", "123"]).
             and("telefono").isNotNull().
-            or("telefono").equal(123)
+            or("telefono").equal(123);
+
+    type Response = Prettify<getSchema<typeof personas>>;
 
     personas.select(["nombre", "cedula"]);
 

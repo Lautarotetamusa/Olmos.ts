@@ -20,6 +20,10 @@ type Merge<
     ? Acc & Merge<Map, Rest, Map[K]>
     : Acc;
 
+export type getSchema<T extends Olmos<any, any>> = T extends Olmos<infer SchemaMap, infer Tables>
+  ? generateSchema<SchemaMap, Tables>
+  : never;
+
 type generateSchema<
     Map extends Record<string, any>,
     Tables extends (keyof Map)[],
@@ -43,11 +47,6 @@ type parseSchema<
     {
         [K in string & diff as `${Table}.${K}`]: Map[Table][K]
     }
-
-export type getSchema<T> = 
-    T extends Olmos<infer _, infer Schema>
-        ? Schema
-        : never;
 
 export class Olmos<
     /** 
@@ -107,6 +106,20 @@ class Select<Schema extends Record<string, any>>{
 
     where<const Field extends keyof Schema>(fieldName: Field){
         return new WhereIncompleted<Schema, Field>(fieldName, this.query + " WHERE ");
+    }
+
+    groupBy<const Field extends keyof Schema>(fieldName: Field){
+        //assert(fieldName != "", "Field name can't be empty");
+        this.query += ` GROUP BY ${fieldName as string}`;
+        return new GroupBy<Schema>(this.query);
+    }
+}
+
+class GroupBy<Schema extends Record<string, any>>{
+    query: string;
+    
+    constructor(query: string){
+        this.query = query; 
     }
 }
 
