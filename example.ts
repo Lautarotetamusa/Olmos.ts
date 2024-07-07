@@ -1,4 +1,4 @@
-import {Olmos, getSchema} from "./olmos";
+import {Olmos, getSchema, Generated} from "./olmos";
 import {sql} from "./db";
 import { WhereIncompleted } from "./where";
 
@@ -13,7 +13,7 @@ interface PersonaSchema {
 
 interface ZonaSchema {
     cod_zona: Generated<number>, 
-    nombre: string
+    nombre: string,
 }
 
 interface CargoSchema {
@@ -67,11 +67,14 @@ async function main(){
     });
     const cargo = Olmos.new<CargoSchema, "Cargos">("Cargos", sql);
     const depto = Olmos.new<DeptoSchema, "Departamentos">("Departamentos", sql);
-    const zona = Olmos.new<ZonaSchema, "Zonas">("Zonas", sql);
+    const zona  = Olmos.new<ZonaSchema, "Zonas">("Zonas", sql);
    
     //El cod de zona debería ser tomado de la tabla, eso estaría muy bueno
     const nuevaZona = zona.insert({
         "nombre": "holas"
+        Zonas: {
+            "nombre": hola
+        }
     });
 
     const res2 = await Persona.model.getOne({
@@ -84,6 +87,10 @@ async function main(){
     
     const personasCargo = Persona.model.join("inner", cargo, {
         "Personas.cod_cargo": "Cargos.cod_cargo"
+    }).insert({
+        Personas: {
+            nombre: 'hola'
+        }
     });
     type PersonasCargoSchema = getSchema<typeof personasCargo>;
     
@@ -98,7 +105,7 @@ async function main(){
         "nombre": "juan",
         "password": "anashe",
         "cod_zona": 1,
-        "cod_cargo": 1
+        "cod_cargo": 1,
     });
 
     const personas = Olmos.new<PersonaSchema, "Personas">("Personas", sql);

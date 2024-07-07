@@ -5,6 +5,13 @@ type RemovePrefix<Map> = {
   [K in keyof Map as K extends `${string}.${infer Value}` ? Value : K]: Map[K];
 }
 
+export type Generated<T> = {
+    value: T;
+};
+type getRequired<S> = Pick<S, {
+    [K in keyof S]: S[K] extends Generated<any> ? never : K;
+}[keyof S]>;
+
 type Merge<
     Map extends Record<string, any>,
     Keys extends (keyof Map)[] = (keyof Map)[],
@@ -179,7 +186,11 @@ export class Olmos<
         return rows as any;
     }
 
-    async insert(req: Schema): Promise<number>{
+    /** 
+        * @param req Schema generado con todas las tablas
+        * @returns La clave primaria del objeto
+    */
+    async insert(req: getRequired<Schema>): Promise<number>{
         const query = `INSERT INTO ${this.from} SET ?`
 
         try {
