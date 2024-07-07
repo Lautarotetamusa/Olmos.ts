@@ -1,5 +1,6 @@
 import {Olmos, getSchema} from "./olmos";
 import {sql} from "./db";
+import { WhereIncompleted } from "./where";
 
 interface PersonaSchema {
     nombre: string,
@@ -37,7 +38,9 @@ class Persona{
 
     static async getOne(cedula: PersonaSchema["cedula"]){
         const fields = await Persona.model.getOne({
-            where: {cedula: cedula}
+            where: {
+                cedula: new WhereIncompleted("cedula").equal(cedula)
+            }
         });
         return new Persona(fields);
     }
@@ -46,7 +49,9 @@ class Persona{
         if (this.fields.cedula == undefined){
             await Persona.model.insert(this.fields);
         }else{
-            await Persona.model.update(this.fields, {"cedula": this.fields.cedula});
+            await Persona.model.update(this.fields, {
+                cedula: new WhereIncompleted("cedula").equal(this.fields.cedula)
+            });
         }
     }
 }
@@ -65,6 +70,10 @@ async function main(){
     const zona = Olmos.new<ZonaSchema, "Zonas">("Zonas", sql);
 
     const res2 = await Persona.model.getOne({
+        where: {
+            cedula: new WhereIncompleted("cedula").lessEqual("1234").or().equal("456"),
+            nombre: new WhereIncompleted("nombre").in(["a", "b"])
+        },
         fields: ["nombre", "telefono", "cedula"]}
     );
     
@@ -87,8 +96,19 @@ async function main(){
         "cod_cargo": 1
     });
 
+    const personas = Olmos.new<PersonaSchema, "Personas">("Personas", sql);
+    personas.
+        select(["nombre", "cedula", "id_depto"]).
+        join(cargoModel).inner().
+            on("id_depto").equal("Cargos.id_depto")  
+        where("cedula").in([]).and().
+            nombre.notNull()
+        orderBy("cedula")
+
     const res = await personasCargoDepto.getAll({
-        where: {cedula: ['2043491978', '348213902', '348213901']},
+        where: {
+            cedula: new WhereIncompleted("cedula").in(['2043491978', '348213902', '348213901'])
+        },
         fields: ["cedula", "Personas.nombre", "Cargos.cod_cargo", "Departamentos.telefono"]
     });
     console.log(res);

@@ -1,4 +1,5 @@
 import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { WhereCompleted } from "./where";
 
 type RemovePrefix<Map> = {
   [K in keyof Map as K extends `${string}.${infer Value}` ? Value : K]: Map[K];
@@ -37,7 +38,7 @@ type parseSchema<
         [K in string & diff as `${Table}.${K}`]: Map[Table][K]
     }
 
-type Where<Schema> = Partial<{ [K in keyof Schema]: Schema[K] | Schema[K][] }>;
+type Where<Schema> = Partial<{ [K in keyof Schema]: WhereCompleted<Schema[K]>}>;
 
 interface DBConnection{
     query<T>(sql: string, value: any): Promise<T>;
@@ -93,29 +94,20 @@ export class Olmos<
         return new Olmos<{[K in T]: S}, [T]>(from as string, connection); 
     }
 
-    protected formatWhere(req?: Where<Schema>){
-        let whereQuery = "";
-        let whereList: any[] = [];
+    protected formatWhere(where?: Where<Schema>){
+        let query = "";
+        let list: any[] = [];
 
-        if (req && Object.keys(req).length > 0){
-            type key = keyof typeof req;
-            whereQuery = "WHERE ";
-            for (let field in req){ 
-                if (Array.isArray(req[field])){
-                    const values = (req[field as key] as any[]).join(', ');
-                    whereQuery += `(${field}) IN (${values}) AND `;
-                }else{
-                    whereQuery += `${field} = ? AND `;
-                    whereList.push(req[field as key]);
-                }
-            }
-            whereQuery = whereQuery.substring(0, whereQuery.length-4);
+        if (where === null){
+            return [query, list];
         }
 
-        return {
-            whereQuery: whereQuery,
-            whereList: whereList
+        for (let k in where){ 
+            query += where[k]?.query
+            list.push(where[k]?.list);
         }
+
+        return [query, list];
     }
 
     innerJoin<S extends Record<string, any>, 
@@ -151,7 +143,7 @@ export class Olmos<
         }
     ): Promise<RemovePrefix<Pick<Schema, Field>>>
     {
-        const {whereQuery, whereList} = this.formatWhere(options.where);
+        const [whereQuery, whereList] = this.formatWhere(options.where);
         
         const query = `
             SELECT ${options.fields ? options.fields.join(',') : '*'}
@@ -175,7 +167,7 @@ export class Olmos<
         }
     ): Promise<RemovePrefix<Pick<Schema, Field>>>
     {
-        const {whereQuery, whereList} = this.formatWhere(options.where);
+        const [whereQuery, whereList] = this.formatWhere(options.where);
         
         const query = `
             SELECT ${options.fields ? options.fields.join(',') : '*'}
@@ -202,7 +194,7 @@ export class Olmos<
     async update(req: Schema, 
                  where?: Where<Schema>
         ){
-        const {whereQuery, whereList} = this.formatWhere(where);
+        const [whereQuery, whereList] = this.formatWhere(where);
 
         const query = `
             UPDATE ${this.from}
@@ -221,7 +213,7 @@ export class Olmos<
     }
 
     async delete(where?: Where<Schema>){
-        const {whereQuery, whereList} = this.formatWhere(where);
+        const [whereQuery, whereList] = this.formatWhere(where);
 
         const query = `
             DELETE FROM ${this.from}
