@@ -4,11 +4,15 @@
     "author": "Lautaro Teta Musa",
     "license": "ISC",
     "main": "olmos.ts",
+    "type": "module",
     "dependencies": {
-        "mysql2": "^3.9.1",
         "ts-node": "^10.9.2"
     },
     "scripts": {
         "example": "tsc example.ts --outDir dist/ --module commonjs && node dist/example.js"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "ts-jest": "^29.1.5"
     }
 }

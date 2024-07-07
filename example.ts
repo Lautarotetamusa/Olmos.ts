@@ -111,10 +111,8 @@ async function main(){
     const personas = Olmos.new<PersonaSchema, "Personas">("Personas", sql);
     personas.
         select(["nombre", "cedula", "id_depto"]).
-        join(cargoModel).inner().
-            on("id_depto").equal("Cargos.id_depto")  
-        where("cedula").in([]).and().
-            nombre.notNull()
+        where("cedula").in([]).
+            and("nombre").notNull()
         orderBy("cedula")
 
     const res = await personasCargoDepto.getAll({
